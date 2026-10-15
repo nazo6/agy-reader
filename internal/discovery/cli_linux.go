@@ -164,31 +164,18 @@ func cliEndpointsFromProc(proc, root, wantedURL string) []Connection {
 // agy-pair's URL-safe tokens start with "-" about one time in 64.
 func cliLaunchToken(cmdline []byte) string {
 	args := strings.Split(string(cmdline), "\x00")
-	if len(args) < 2 {
-		return ""
-	}
-	name, token, inline := strings.Cut(args[1], "=")
-	if name != "--csrf_token" && name != "-csrf_token" {
-		return ""
-	}
-	next := 2
-	if !inline {
-		if len(args) < 3 {
-			return ""
-		}
-		token = args[2]
-		next = 3
-	}
-	if token == "" || (!inline && strings.HasPrefix(token, "-")) {
-		return ""
-	}
-	for _, arg := range args[next:] {
-		name, _, _ := strings.Cut(arg, "=")
+	for i, arg := range args {
+		name, token, inline := strings.Cut(arg, "=")
 		if name == "--csrf_token" || name == "-csrf_token" {
-			return ""
+			if inline {
+				return token
+			}
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				return args[i+1]
+			}
 		}
 	}
-	return token
+	return ""
 }
 
 // scripts/agy-pair.py --token-mode=shim starts agy with the placeholder
@@ -304,3 +291,4 @@ func sameLocalEndpoint(a, b string) bool {
 	port := localAddressPort(strings.TrimSuffix(strings.TrimPrefix(a, prefix), "/"))
 	return port != "" && port == localAddressPort(strings.TrimPrefix(b, prefix))
 }
+
